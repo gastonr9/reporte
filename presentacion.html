@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>REPORTE EN TIEMPO REAL</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 800;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+
+      .container {
+        max-width: 1600px;
+        margin: 0 auto;
+        overflow-x: auto;
+      }
+
+      h1 {
+        text-align: center;
+        color: #4caf50;
+        margin-bottom: 30px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 26px;
+        margin: auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      th,
+      td {
+        border: 2px solid #000000;
+        text-align: center;
+        padding: 15px;
+      }
+
+      th {
+        background-color: #4caf50;
+        color: white;
+        font-weight: bold;
+      }
+
+      .loading {
+        text-align: center;
+        font-size: 24px;
+        padding: 50px;
+      }
+
+      .error {
+        color: red;
+        text-align: center;
+        font-size: 24px;
+        padding: 50px;
+      }
+
+      .status {
+        text-align: center;
+        font-size: 18px;
+        margin-bottom: 15px;
+        color: #666;
+      }
+
+      .refresh-btn {
+        display: block;
+        margin: 0 auto 20px;
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 18px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      .refresh-btn:hover {
+        background-color: #3e8e41;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <button id="refresh-btn" class="refresh-btn">Actualizar Ahora</button>
+      <div id="status" class="status"></div>
+      <div id="table-container">
+        <div class="loading">Cargando datos...</div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const baseUrl =
+          "https://docs.google.com/spreadsheets/d/e/2PACX-1vSHAmFEcRAb9x-UmLD6aNPaaf29Jld44-mcmei2N7Chxa0Ra1Yk1agmymCB1JLJ_mBNo7QAKbKYjvjp/pubhtml?gid=1720136139";
+        let refreshInterval = null;
+        const refreshRate = 20000; // 5 segundos
+
+        // Función para obtener la URL con timestamp para evitar cache
+        function getUrlWithTimestamp() {
+          return `${baseUrl}&timestamp=${new Date().getTime()}`;
+        }
+
+        // Función para actualizar el estado
+        function updateStatus(message) {
+          const now = new Date();
+          document.getElementById(
+            "status"
+          ).textContent = `${message} - Última actualización: ${now.toLocaleTimeString()}`;
+        }
+
+        // Función principal para cargar los datos
+        function loadData() {
+          updateStatus("Actualizando datos...");
+
+          fetch(getUrlWithTimestamp())
+            .then((response) => response.text())
+            .then((html) => {
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(html, "text/html");
+              const tbody = doc.querySelector("tbody");
+
+              if (!tbody) {
+                throw new Error("No se encontró la tabla");
+              }
+
+              // Función mejorada para extraer el color de fondo
+              function getBackgroundColor(cell) {
+                // Primero verificar el estilo en línea
+                if (cell.style.backgroundColor) {
+                  return cell.style.backgroundColor;
+                }
+
+                // Buscar en las clases de la celda
+                const classNames = cell.className.split(" ");
+                const styleElement = doc.querySelector("style");
+
+                if (!styleElement) return "";
+
+                const styleText = styleElement.textContent;
+
+                for (const className of classNames) {
+                  if (className.startsWith("s")) {
+                    // Buscar el color en el texto de estilo
+                    const regex = new RegExp(
+                      `\\.${className}\\s*\\{[^}]*background-color:\\s*([^;]+);`,
+                      "i"
+                    );
+                    const match = styleText.match(regex);
+
+                    if (match && match[1]) {
+                      return match[1].trim();
+                    }
+                  }
+                }
+
+                return "";
+              }
+
+              // Crear tabla HTML
+              let htmlTable = "<table>";
+              htmlTable += "<thead><tr>";
+
+              // Procesar fila de encabezados (omitir primera columna)
+              const headerRow = tbody.querySelector("tr");
+              if (headerRow) {
+                const headerCells = headerRow.querySelectorAll("th, td");
+                headerCells.forEach((cell, index) => {
+                  if (index === 0) return; // Saltar primera columna
+                  htmlTable += `<th>${cell.textContent.trim()}</th>`;
+                });
+                htmlTable += "</tr></thead><tbody>";
+              }
+
+              // Procesar filas de datos (omitir primera columna)
+              const rows = tbody.querySelectorAll("tr");
+              rows.forEach((row, rowIndex) => {
+                if (rowIndex === 0) return; // Saltar fila de encabezado
+
+                htmlTable += "<tr>";
+                const cells = row.querySelectorAll("th, td");
+                cells.forEach((cell, cellIndex) => {
+                  if (cellIndex === 0) return; // Saltar primera columna
+                  const text = cell.textContent.trim();
+                  const bgColor = getBackgroundColor(cell);
+                  const style = bgColor ? `background-color: ${bgColor}` : "";
+                  htmlTable += `<td style="${style}">${text}</td>`;
+                });
+                htmlTable += "</tr>";
+              });
+
+              htmlTable += "</tbody></table>";
+
+              document.getElementById("table-container").innerHTML = htmlTable;
+              updateStatus("Datos cargados correctamente");
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              document.getElementById(
+                "table-container"
+              ).innerHTML = `<div class="error">Error al cargar datos: ${error.message}</div>`;
+              updateStatus("Error al cargar datos");
+            });
+        }
+
+        // Configurar auto-actualización
+        function startAutoRefresh() {
+          if (refreshInterval) {
+            clearInterval(refreshInterval);
+          }
+          refreshInterval = setInterval(loadData, refreshRate);
+        }
+
+        // Configurar botón de actualización manual
+        document
+          .getElementById("refresh-btn")
+          .addEventListener("click", function () {
+            loadData();
+            startAutoRefresh(); // Reiniciar el temporizador
+          });
+
+        // Iniciar la carga inicial y el auto-refresh
+        loadData();
+        startAutoRefresh();
+      });
+    </script>
+  </body>
+</html>

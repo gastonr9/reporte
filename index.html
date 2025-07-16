@@ -33,13 +33,15 @@
         border-collapse: collapse;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         font-size: 26px;
+        /* max-width: 1000px; */
+        min-width: max-content;
       }
 
       th,
       td {
         border: 2px solid #000000;
         text-align: center;
-        padding: 5px;
+        margin: 200px;
       }
 
       th {
@@ -84,6 +86,7 @@
       .bar {
         display: flex;
         margin-bottom: 10px;
+        /* min-width: max-content; */
       }
     </style>
   </head>
@@ -104,7 +107,7 @@
         const baseUrl =
           "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlbYlX3y3ym8VeKgl9INPxLa_jEcbmud4d6aQJ9zOEFPU6Mrd3lZcObc-ojsRi8uSPmVxKjH8Nliru/pubhtml?gid=1720136139&single=true";
         let refreshInterval = null;
-        const refreshRate = 20000;
+        const refreshRate = 10000;
 
         function getUrlWithTimestamp() {
           return `${baseUrl}&timestamp=${new Date().getTime()}`;

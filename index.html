@@ -3,233 +3,111 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>REPORTE EN TIEMPO REAL</title>
+    <title>Google Sheets con Colores</title>
     <style>
       * {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       }
       body {
-        font-weight: 700;
-        margin: 0;
-        padding: 20px;
-        background-color: #f5f5f5;
-      }
-
-      .container {
-        max-width: 1600px;
-        margin: 0 auto;
-      }
-      a {
-        align-content: center;
-      }
-      h1 {
-        text-align: center;
-        color: #4caf50;
-        margin-bottom: 30px;
+        font-weight: 600;
       }
 
       table {
-        width: 100%;
         border-collapse: collapse;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        font-size: 26px;
-        /* max-width: 1000px; */
-        min-width: max-content;
+        /* min-width: max-content; */
       }
 
       th,
       td {
-        border: 2px solid #000000;
+        border: 1px solid #000000;
         text-align: center;
-        margin: 200px;
+        padding: 0 20px;
+        font-size: 3cqmin;
       }
 
       th {
         background-color: #4caf50;
-        color: white;
-        font-weight: bold;
-      }
-
-      .loading {
-        text-align: center;
-        font-size: 24px;
-        padding: 50px;
-      }
-
-      .error {
-        color: red;
-        text-align: center;
-        font-size: 24px;
-        padding: 50px;
-      }
-
-      .status {
-        font-size: 18px;
-      }
-
-      .refresh-btn {
-        display: block;
-        margin: 0 10px 0 0;
-        padding: 10px 20px;
-        background-color: #4caf50;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        font-size: 18px;
-        cursor: pointer;
-        font-weight: bold;
-      }
-
-      .refresh-btn:hover {
-        background-color: #3e8e41;
-      }
-      .bar {
-        display: flex;
-        margin-bottom: 10px;
-        /* min-width: max-content; */
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="bar">
-        <button id="refresh-btn" class="refresh-btn">Actualizar Ahora</button>
-        <a id="status" class="status"></a>
-      </div>
-
-      <div id="table-container">
-        <a class="loading">Cargando datos...</a>
-      </div>
-    </div>
+    <div id="table-container">Cargando...</div>
 
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const baseUrl =
-          "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlbYlX3y3ym8VeKgl9INPxLa_jEcbmud4d6aQJ9zOEFPU6Mrd3lZcObc-ojsRi8uSPmVxKjH8Nliru/pubhtml?gid=1720136139&single=true";
-        let refreshInterval = null;
-        const refreshRate = 10000;
+      const JSON_URL =
+        "https://opensheet.elk.sh/18Cf-eNt4IdN8wB_zE43Mjc6SsKQSOt8ExMK-2NkMBBo/2";
+      const HTML_URL =
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlbYlX3y3ym8VeKgl9INPxLa_jEcbmud4d6aQJ9zOEFPU6Mrd3lZcObc-ojsRi8uSPmVxKjH8Nliru/pubhtml?gid=1720136139&single=true";
 
-        function getUrlWithTimestamp() {
-          return `${baseUrl}&timestamp=${new Date().getTime()}`;
-        }
+      async function loadData() {
+        try {
+          const [jsonData, htmlText] = await Promise.all([
+            fetch(`${JSON_URL}?_=${Date.now()}`).then((res) => res.json()),
+            fetch(`${HTML_URL}&_=${Date.now()}`).then((res) => res.text()),
+          ]);
 
-        function updateStatus(message) {
-          const now = new Date();
-          document.getElementById(
-            "status"
-          ).textContent = `${message} - Última actualización: ${now.toLocaleTimeString()}`;
-        }
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(htmlText, "text/html");
 
-        function loadData() {
-          updateStatus("Actualizando datos...");
+          // Crear mapa de clases -> background-color
+          const styleText = htmlDoc.querySelector("style")?.textContent || "";
+          const classColorMap = {};
+          const colorRegex = /\.s\d+\s*{[^}]*background-color:\s*([^;]+);/gi;
+          let match;
+          while ((match = colorRegex.exec(styleText)) !== null) {
+            const fullMatch = match[0];
+            const classNameMatch = fullMatch.match(/\.s\d+/);
+            if (classNameMatch) {
+              classColorMap[classNameMatch[0].substring(1)] = match[1];
+            }
+          }
 
-          fetch(getUrlWithTimestamp())
-            .then((response) => response.text())
-            .then((html) => {
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(html, "text/html");
-              const tbody = doc.querySelector("tbody");
+          // Extraer filas HTML con clases
+          const htmlTableRows = Array.from(
+            htmlDoc.querySelectorAll("table tr")
+          );
 
-              if (!tbody) {
-                throw new Error("No se encontró la tabla");
-              }
+          const headers = Object.keys(jsonData[0]);
+          let htmlOutput = "<table><thead><tr>";
+          headers.forEach((h) => (htmlOutput += `<th>${h}</th>`));
+          htmlOutput += "</tr></thead><tbody>";
 
-              function getBackgroundColor(cell) {
-                if (cell.style.backgroundColor) {
-                  return cell.style.backgroundColor;
-                }
+          jsonData.forEach((row, rowIndex) => {
+            htmlOutput += "<tr>";
+            headers.forEach((key, colIndex) => {
+              const value = row[key] ?? "";
+              let bgColor = "";
 
-                const classNames = cell.className.split(" ");
-                const styleElement = doc.querySelector("style");
-                if (!styleElement) return "";
+              // Buscar clase desde tabla HTML original
+              const htmlRow = htmlTableRows[rowIndex + 2]; // +1 salta el header
+              const htmlCell =
+                htmlRow?.querySelectorAll("td, th")[colIndex + 1]; // +1 salta la primera columna vacía
 
-                const styleText = styleElement.textContent;
-
-                for (const className of classNames) {
-                  if (className.startsWith("s")) {
-                    const regex = new RegExp(
-                      `\\.${className}\\s*\\{[^}]*background-color:\\s*([^;]+);`,
-                      "i"
-                    );
-                    const match = styleText.match(regex);
-                    if (match && match[1]) {
-                      return match[1].trim();
-                    }
+              if (htmlCell?.className) {
+                const classNames = htmlCell.className.split(/\s+/);
+                for (const c of classNames) {
+                  if (classColorMap[c]) {
+                    bgColor = classColorMap[c];
+                    break;
                   }
                 }
-
-                return "";
               }
 
-              let htmlTable = "<table>";
-              htmlTable += "<thead><tr>";
-
-              const headerRow = tbody.querySelector("tr");
-              if (headerRow) {
-                const headerCells = headerRow.querySelectorAll("th, td");
-                headerCells.forEach((cell, index) => {
-                  if (index === 0) return;
-                  const text = cell.textContent.trim();
-                  const rowspan = cell.getAttribute("rowspan");
-                  const colspan = cell.getAttribute("colspan");
-                  const spanAttrs =
-                    (rowspan ? ` rowspan="${rowspan}"` : "") +
-                    (colspan ? ` colspan="${colspan}"` : "");
-                  htmlTable += `<th${spanAttrs}>${text}</th>`;
-                });
-                htmlTable += "</tr></thead><tbody>";
-              }
-
-              const rows = tbody.querySelectorAll("tr");
-              rows.forEach((row, rowIndex) => {
-                if (rowIndex === 0) return;
-                htmlTable += "<tr>";
-                const cells = row.querySelectorAll("th, td");
-                cells.forEach((cell, cellIndex) => {
-                  if (cellIndex === 0) return;
-                  const text = cell.textContent.trim();
-                  const bgColor = getBackgroundColor(cell);
-                  const style = bgColor ? `background-color: ${bgColor}` : "";
-                  const rowspan = cell.getAttribute("rowspan");
-                  const colspan = cell.getAttribute("colspan");
-                  const spanAttrs =
-                    (rowspan ? ` rowspan="${rowspan}"` : "") +
-                    (colspan ? ` colspan="${colspan}"` : "");
-                  htmlTable += `<td${spanAttrs} style="${style}">${text}</td>`;
-                });
-                htmlTable += "</tr>";
-              });
-
-              htmlTable += "</tbody></table>";
-              document.getElementById("table-container").innerHTML = htmlTable;
-              updateStatus("Datos cargados correctamente");
-            })
-            .catch((error) => {
-              console.error("Error:", error);
-              document.getElementById(
-                "table-container"
-              ).innerHTML = `<div class="error">Error al cargar datos: ${error.message}</div>`;
-              updateStatus("Error al cargar datos");
+              htmlOutput += `<td style="background-color: ${bgColor}">${value}</td>`;
             });
-        }
-
-        function startAutoRefresh() {
-          if (refreshInterval) {
-            clearInterval(refreshInterval);
-          }
-          refreshInterval = setInterval(loadData, refreshRate);
-        }
-
-        document
-          .getElementById("refresh-btn")
-          .addEventListener("click", function () {
-            loadData();
-            startAutoRefresh();
+            htmlOutput += "</tr>";
           });
 
-        loadData();
-        startAutoRefresh();
-      });
+          htmlOutput += "</tbody></table>";
+          document.getElementById("table-container").innerHTML = htmlOutput;
+        } catch (err) {
+          console.error(err);
+          document.getElementById("table-container").innerText =
+            "Error al cargar los datos.";
+        }
+      }
+
+      loadData();
     </script>
   </body>
 </html>

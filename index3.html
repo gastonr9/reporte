@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Sheets con Colores</title>
+    <style>
+      * {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+      body {
+        font-weight: 600;
+      }
+
+      table {
+        border-collapse: collapse;
+        /* min-width: max-content; */
+      }
+
+      th,
+      td {
+        border: 1px solid #000000;
+        text-align: center;
+        padding: 0 20px;
+        font-size: 3cqmin;
+      }
+
+      th {
+        background-color: #4caf50;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="table-container">Cargando...</div>
+
+    <script>
+      const JSON_URL =
+        "https://opensheet.elk.sh/18Cf-eNt4IdN8wB_zE43Mjc6SsKQSOt8ExMK-2NkMBBo/2";
+      const HTML_URL =
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlbYlX3y3ym8VeKgl9INPxLa_jEcbmud4d6aQJ9zOEFPU6Mrd3lZcObc-ojsRi8uSPmVxKjH8Nliru/pubhtml?gid=1720136139&single=true";
+
+      async function loadData() {
+        try {
+          const [jsonData, htmlText] = await Promise.all([
+            fetch(`${JSON_URL}?_=${Date.now()}`).then((res) => res.json()),
+            fetch(`${HTML_URL}&_=${Date.now()}`).then((res) => res.text()),
+          ]);
+
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(htmlText, "text/html");
+
+          // Crear mapa de clases -> background-color
+          const styleText = htmlDoc.querySelector("style")?.textContent || "";
+          const classColorMap = {};
+          const colorRegex = /\.s\d+\s*{[^}]*background-color:\s*([^;]+);/gi;
+          let match;
+          while ((match = colorRegex.exec(styleText)) !== null) {
+            const fullMatch = match[0];
+            const classNameMatch = fullMatch.match(/\.s\d+/);
+            if (classNameMatch) {
+              classColorMap[classNameMatch[0].substring(1)] = match[1];
+            }
+          }
+
+          // Extraer filas HTML con clases
+          const htmlTableRows = Array.from(
+            htmlDoc.querySelectorAll("table tr")
+          );
+
+          const headers = Object.keys(jsonData[0]);
+          let htmlOutput = "<table><thead><tr>";
+          headers.forEach((h) => (htmlOutput += `<th>${h}</th>`));
+          htmlOutput += "</tr></thead><tbody>";
+
+          jsonData.forEach((row, rowIndex) => {
+            htmlOutput += "<tr>";
+            headers.forEach((key, colIndex) => {
+              const value = row[key] ?? "";
+              let bgColor = "";
+
+              // Buscar clase desde tabla HTML original
+              const htmlRow = htmlTableRows[rowIndex + 2]; // +1 salta el header
+              const htmlCell =
+                htmlRow?.querySelectorAll("td, th")[colIndex + 1]; // +1 salta la primera columna vacía
+
+              if (htmlCell?.className) {
+                const classNames = htmlCell.className.split(/\s+/);
+                for (const c of classNames) {
+                  if (classColorMap[c]) {
+                    bgColor = classColorMap[c];
+                    break;
+                  }
+                }
+              }
+
+              htmlOutput += `<td style="background-color: ${bgColor}">${value}</td>`;
+            });
+            htmlOutput += "</tr>";
+          });
+
+          htmlOutput += "</tbody></table>";
+          document.getElementById("table-container").innerHTML = htmlOutput;
+        } catch (err) {
+          console.error(err);
+          document.getElementById("table-container").innerText =
+            "Error al cargar los datos.";
+        }
+      }
+
+      loadData();
+    </script>
+  </body>
+</html>

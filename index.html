@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Google Sheets con Colores y Celdas Combinadas</title>
+    <title>Tabla en Tiempo Real</title>
     <style>
       body {
-        font-family: Arial, Helvetica, sans-serif;
+        font-family: Arial, sans-serif;
         background-color: #f5f5f5;
         padding: 20px;
         font-weight: 700;
@@ -18,24 +18,19 @@
       table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 26px;
+        font-size: 22px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         min-width: max-content;
       }
       th,
       td {
         border: 2px solid #000;
-        padding-inline: 20px;
+        padding: 8px 20px;
         text-align: center;
-      }
-      th {
-        background-color: #4caf50;
-        color: white;
       }
     </style>
   </head>
   <body>
-    <h1>Google Sheets en Tiempo Real</h1>
     <div id="table-container">Cargando...</div>
 
     <script>
@@ -53,99 +48,119 @@
 
           const parser = new DOMParser();
           const doc = parser.parseFromString(htmlText, "text/html");
-
           const styleText = doc.querySelector("style")?.textContent || "";
           const classColorMap = {};
           const colorRegex = /\.s\d+\s*{[^}]*}/gi;
 
           let match;
           while ((match = colorRegex.exec(styleText)) !== null) {
-            const className = match[0].match(/\.s\d+/)?.[0]?.substring(1);
+            const cls = match[0].match(/\.s\d+/)?.[0]?.substring(1);
             const bg = match[0].match(/background-color:\s*([^;]+);/i)?.[1];
             const color = match[0].match(/color:\s*([^;]+);/i)?.[1];
-            if (className) {
-              classColorMap[className] = {
+            if (cls) {
+              classColorMap[cls] = {
                 background: bg || "",
                 color: color || "",
               };
             }
           }
 
-          const htmlTableRows = Array.from(
-            doc.querySelectorAll("table tr")
-          ).filter((row) => row.querySelectorAll("td, th").length > 0);
+          const originalTable = doc.querySelector("table");
+          const rows = originalTable.querySelectorAll("tr");
 
-          const headers = Object.keys(jsonData[0]);
-          let html = "<table><thead><tr>";
-          headers.forEach((header) => {
-            html += `<th>${header}</th>`;
+          const lookup = {};
+          jsonData.forEach((row) => {
+            const key = row.PRODUCTO?.trim().toUpperCase();
+            if (key) lookup[key] = row;
           });
-          html += "</tr></thead><tbody>";
 
-          const spanMap = {}; // mapa de celdas ocupadas por rowspan/colspan
+          function replaceCellText(cellText, rowData) {
+            const upper = cellText.trim().toUpperCase();
+            if (!upper || !rowData) return cellText;
 
-          jsonData.forEach((row, rowIndex) => {
-            html += "<tr>";
-            headers.forEach((key, colIndex) => {
-              while (spanMap[`${rowIndex},${colIndex}`]) {
-                colIndex++;
+            // Si la celda coincide con una clave
+            if (upper in rowData) {
+              return rowData[upper];
+            }
+
+            // También si es PEDIDO, DESPACHADO, RESTANTE, ESPECIALES...
+            const keys = Object.keys(rowData);
+            for (let k of keys) {
+              if (cellText.trim().toLowerCase() === k.trim().toLowerCase()) {
+                return rowData[k];
               }
+            }
 
-              const value = row[key] ?? "";
-              const htmlRow = htmlTableRows[rowIndex + 1];
-              const htmlCell =
-                htmlRow?.querySelectorAll("td, th")[colIndex + 1];
+            return cellText;
+          }
+
+          let htmlOutput = "<table><tbody>";
+
+          rows.forEach((row, rowIndex) => {
+            if (rowIndex === 1) return; // ⛔️ Saltar la primera fila
+
+            htmlOutput += "<tr>";
+            const cells = row.querySelectorAll("td, th");
+            const firstCellText =
+              row.querySelector("td, th")?.textContent?.toUpperCase()?.trim() ||
+              "";
+            const rowData = lookup[firstCellText] || null;
+
+            cells.forEach((cell, cellIndex) => {
+              if (cellIndex === 0) return; // ⛔️ Saltar la primera columna
+
+              const tag = cell.tagName.toLowerCase();
+              const classList = cell.className.split(/\s+/);
+              const styleParts = [];
 
               let bgColor = "";
-              let color = "";
-              let rowspan = "";
-              let colspan = "";
+              let txtColor = "";
 
-              if (htmlCell) {
-                const classNames = htmlCell.className.split(/\s+/);
-                classNames.forEach((cls) => {
-                  if (classColorMap[cls]) {
-                    bgColor = classColorMap[cls].background;
-                    color = classColorMap[cls].color;
-                  }
-                });
+              classList.forEach((cls) => {
+                const styles = classColorMap[cls];
+                if (styles?.background) bgColor = styles.background;
+                if (styles?.color && styles.color !== "transparent")
+                  txtColor = styles.color;
+              });
 
-                rowspan = htmlCell.getAttribute("rowspan");
-                colspan = htmlCell.getAttribute("colspan");
+              if (bgColor) styleParts.push(`background-color:${bgColor}`);
+              if (txtColor) styleParts.push(`text-color:${txtColor}`);
 
-                const rs = parseInt(rowspan || 1);
-                const cs = parseInt(colspan || 1);
-                for (let r = 0; r < rs; r++) {
-                  for (let c = 0; c < cs; c++) {
-                    if (r !== 0 || c !== 0) {
-                      spanMap[`${rowIndex + r},${colIndex + c}`] = true;
-                    }
-                  }
-                }
+              const style =
+                styleParts.length > 0 ? ` style="${styleParts.join(";")}"` : "";
+
+              const spanAttrs = [];
+              if (cell.hasAttribute("rowspan")) {
+                spanAttrs.push(`rowspan="${cell.getAttribute("rowspan")}"`);
+              }
+              if (cell.hasAttribute("colspan")) {
+                spanAttrs.push(`colspan="${cell.getAttribute("colspan")}"`);
               }
 
-              const style = `${bgColor ? `background-color:${bgColor};` : ""}${
-                color ? `color:${color};` : ""
-              }`;
-              const spanAttrs =
-                (rowspan ? ` rowspan="${rowspan}"` : "") +
-                (colspan ? ` colspan="${colspan}"` : "");
-              html += `<td${spanAttrs} style="${style}">${value}</td>`;
+              let content = cell.textContent.trim();
+              if (rowData) {
+                content = replaceCellText(content, rowData);
+              }
+
+              htmlOutput += `<${tag} ${spanAttrs.join(
+                " "
+              )}${style}>${content}</${tag}>`;
             });
-            html += "</tr>";
+
+            htmlOutput += "</tr>";
           });
 
-          html += "</tbody></table>";
-          document.getElementById("table-container").innerHTML = html;
-        } catch (error) {
-          console.error(error);
+          htmlOutput += "</tbody></table>";
+          document.getElementById("table-container").innerHTML = htmlOutput;
+        } catch (err) {
+          console.error("Error al cargar:", err);
           document.getElementById("table-container").innerText =
             "Error al cargar los datos.";
         }
       }
 
       loadData();
-      setInterval(loadData, 20000); // auto-refresh cada 20s
+      setInterval(loadData, 20000);
     </script>
   </body>
 </html>

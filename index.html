@@ -3,165 +3,192 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tabla en Tiempo Real</title>
+    <title>Monitor de Alertas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f5f5f5;
-        padding: 20px;
-        font-weight: 700;
+      .alerta-animada {
+        animation: pulse 2s infinite;
       }
-      h1 {
-        text-align: center;
-        color: #4caf50;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 22px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        min-width: max-content;
-      }
-      tr {
-      }
-      td {
-        border: 1px solid #000;
-        padding: 8px 0px;
-        text-align: center;
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
       }
     </style>
   </head>
-  <body>
-    <div id="table-container">Cargando...</div>
+  <body class="bg-gray-100 min-h-screen p-6">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold text-center mb-8 text-blue-600">
+        Monitor de Alertas
+      </h1>
+
+      <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+        <div id="estado-conexion" class="flex items-center mb-4">
+          <div
+            class="w-3 h-3 rounded-full bg-gray-400 mr-2"
+            id="conexion-icon"
+          ></div>
+          <span id="conexion-texto">Esperando conexión...</span>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold">Últimas alertas</h2>
+          <button
+            id="test-btn"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            Probar conexión
+          </button>
+        </div>
+
+        <div id="alertas-container" class="space-y-3">
+          <!-- Alertas aparecerán aquí -->
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Configuración</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-1"
+              >URL del Webhook</label
+            >
+            <input
+              type="text"
+              id="webhook-url"
+              class="w-full p-2 border rounded"
+              placeholder="https://tupagina.com/recibir-alerta"
+            />
+          </div>
+          <button
+            id="save-btn"
+            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+          >
+            Guardar configuración
+          </button>
+        </div>
+      </div>
+    </div>
 
     <script>
-      const JSON_URL =
-        "https://opensheet.elk.sh/18Cf-eNt4IdN8wB_zE43Mjc6SsKQSOt8ExMK-2NkMBBo/2";
-      const HTML_URL =
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlbYlX3y3ym8VeKgl9INPxLa_jEcbmud4d6aQJ9zOEFPU6Mrd3lZcObc-ojsRi8uSPmVxKjH8Nliru/pubhtml?gid=1720136139&single=true";
+      // URL de tu webhook (se puede configurar en el panel)
+      let webhookUrl = localStorage.getItem("webhookUrl") || "";
+      document.getElementById("webhook-url").value = webhookUrl;
 
-      async function loadData() {
-        try {
-          const [jsonData, htmlText] = await Promise.all([
-            fetch(`${JSON_URL}?_=${Date.now()}`).then((r) => r.json()),
-            fetch(`${HTML_URL}&_=${Date.now()}`).then((r) => r.text()),
-          ]);
+      // Elementos del DOM
+      const conexionIcon = document.getElementById("conexion-icon");
+      const conexionText = document.getElementById("conexion-texto");
+      const alertasContainer = document.getElementById("alertas-container");
+      const testBtn = document.getElementById("test-btn");
+      const saveBtn = document.getElementById("save-btn");
 
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(htmlText, "text/html");
-          const styleText = doc.querySelector("style")?.textContent || "";
-          const classColorMap = {};
-          const colorRegex = /\.s\d+\s*{[^}]*}/gi;
+      // Configurar EventSource para recibir alertas en tiempo real
+      let eventSource;
 
-          let match;
-          while ((match = colorRegex.exec(styleText)) !== null) {
-            const cls = match[0].match(/\.s\d+/)?.[0]?.substring(1);
-            const bg = match[0].match(/background-color:\s*([^;]+);/i)?.[1];
-            const color = match[0].match(/color:\s*([^;]+);/i)?.[1];
-            if (cls) {
-              classColorMap[cls] = {
-                background: bg || "",
-                color: color || "",
-              };
-            }
-          }
+      function conectarWebhook() {
+        if (eventSource) eventSource.close();
 
-          const originalTable = doc.querySelector("table");
-          const rows = originalTable.querySelectorAll("tr");
+        if (webhookUrl) {
+          // En un entorno real, usarías tu propia lógica para recibir actualizaciones
+          // Esto es una simulación ya que Google Apps Script no soporta Server-Sent Events directamente
 
-          const lookup = {};
-          jsonData.forEach((row) => {
-            const key = row.PRODUCTO?.trim().toUpperCase();
-            if (key) lookup[key] = row;
-          });
+          conexionIcon.classList.remove("bg-gray-400", "bg-red-500");
+          conexionIcon.classList.add("bg-yellow-400");
+          conexionText.textContent = "Conectando...";
 
-          function replaceCellText(cellText, rowData) {
-            const upper = cellText.trim().toUpperCase();
-            if (!upper || !rowData) return cellText;
+          // Simulamos conexión (en producción usarías un backend real)
+          setTimeout(() => {
+            conexionIcon.classList.remove("bg-yellow-400");
+            conexionIcon.classList.add("bg-green-500");
+            conexionText.textContent = `Conectado a ${
+              new URL(webhookUrl).hostname
+            }`;
 
-            // Si la celda coincide con una clave
-            if (upper in rowData) {
-              return rowData[upper];
-            }
-
-            // También si es PEDIDO, DESPACHADO, RESTANTE, ESPECIALES...
-            const keys = Object.keys(rowData);
-            for (let k of keys) {
-              if (cellText.trim().toLowerCase() === k.trim().toLowerCase()) {
-                return rowData[k];
-              }
-            }
-
-            return cellText;
-          }
-
-          let htmlOutput = "<table><tbody>";
-
-          rows.forEach((row, rowIndex) => {
-            if (rowIndex === 1) return; // ⛔️ Saltar la primera fila
-
-            htmlOutput += "<tr>";
-            const cells = row.querySelectorAll("td, th");
-            const firstCellText =
-              row.querySelector("td, th")?.textContent?.toUpperCase()?.trim() ||
-              "";
-            const rowData = lookup[firstCellText] || null;
-
-            cells.forEach((cell, cellIndex) => {
-              if (cellIndex === 0) return; // ⛔️ Saltar la primera columna
-
-              const tag = cell.tagName.toLowerCase();
-              const classList = cell.className.split(/\s+/);
-              const styleParts = [];
-
-              let bgColor = "";
-              let txtColor = "";
-
-              classList.forEach((cls) => {
-                const styles = classColorMap[cls];
-                if (styles?.background) bgColor = styles.background;
-                if (styles?.color && styles.color !== "transparent")
-                  txtColor = styles.color;
-              });
-
-              if (bgColor) styleParts.push(`background-color:${bgColor}`);
-              if (txtColor) styleParts.push(`text-color:${txtColor}`);
-
-              const style =
-                styleParts.length > 0 ? ` style="${styleParts.join(";")}"` : "";
-
-              const spanAttrs = [];
-              if (cell.hasAttribute("rowspan")) {
-                spanAttrs.push(`rowspan="${cell.getAttribute("rowspan")}"`);
-              }
-              if (cell.hasAttribute("colspan")) {
-                spanAttrs.push(`colspan="${cell.getAttribute("colspan")}"`);
-              }
-
-              let content = cell.textContent.trim();
-              if (rowData) {
-                content = replaceCellText(content, rowData);
-              }
-
-              htmlOutput += `<${tag} ${spanAttrs.join(
-                " "
-              )}${style}>${content}</${tag}>`;
-            });
-
-            htmlOutput += "</tr>";
-          });
-
-          htmlOutput += "</tbody></table>";
-          document.getElementById("table-container").innerHTML = htmlOutput;
-        } catch (err) {
-          console.error("Error al cargar:", err);
-          document.getElementById("table-container").innerText =
-            "Error al cargar los datos.";
+            // Esto es solo para demostración - en realidad deberías tener un backend
+            console.log(`Conectado a ${webhookUrl}`);
+          }, 1500);
+        } else {
+          conexionIcon.classList.remove("bg-gray-400", "bg-green-500");
+          conexionIcon.classList.add("bg-red-500");
+          conexionText.textContent = "Sin URL configurada";
         }
       }
 
-      loadData();
-      setInterval(loadData, 30000);
+      // Función para agregar una nueva alerta
+      function agregarAlerta(mensaje, fecha) {
+        const alertaDiv = document.createElement("div");
+        alertaDiv.className =
+          "border-l-4 border-blue-500 bg-blue-50 p-3 rounded alerta-animada";
+
+        alertaDiv.innerHTML = `
+                <div class="flex justify-between">
+                    <strong class="text-blue-700">Nueva alerta</strong>
+                    <span class="text-sm text-gray-500">${fecha}</span>
+                </div>
+                <p class="mt-1">${mensaje}</p>
+            `;
+
+        alertasContainer.prepend(alertaDiv);
+
+        // Quitar la animación después de 3 segundos
+        setTimeout(() => {
+          alertaDiv.classList.remove("alerta-animada");
+        }, 3000);
+
+        // Limitar a 10 alertas
+        if (alertasContainer.children.length > 10) {
+          alertasContainer.removeChild(alertasContainer.lastChild);
+        }
+      }
+
+      // Event listeners
+      saveBtn.addEventListener("click", () => {
+        webhookUrl = document.getElementById("webhook-url").value.trim();
+        localStorage.setItem("webhookUrl", webhookUrl);
+        alert("Configuración guardada correctamente");
+        conectarWebhook();
+      });
+
+      testBtn.addEventListener("click", () => {
+        if (!webhookUrl) {
+          alert("Por favor configura primero la URL del webhook");
+          return;
+        }
+
+        agregarAlerta(
+          "Alerta de prueba generada localmente",
+          new Date().toLocaleString()
+        );
+      });
+
+      // Aquí en un entorno real tendrías una función para recibir las alertas del backend
+      // Esta es una simulación:
+      function simularAlerta(mensaje) {
+        agregarAlerta(mensaje, new Date().toLocaleString());
+      }
+
+      // Iniciar conexión al cargar la página
+      conectarWebhook();
+
+      // Para propósitos de demostración - simular alertas aleatorias cada 10 segundos
+      setInterval(() => {
+        const mensajesDemo = [
+          "Se actualizó la celda A1 en REPORTE",
+          "Se modificó el rango B2:D5",
+          "Nuevos datos ingresados en REPORTE",
+          "Cambio detectado en REPORTE",
+        ];
+
+        const mensaje =
+          mensajesDemo[Math.floor(Math.random() * mensajesDemo.length)];
+        // simularAlerta(mensaje);
+      }, 10000);
     </script>
   </body>
 </html>

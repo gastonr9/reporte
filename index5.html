@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Alerta Cocina</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 50px;
+        background-color: #f8f8f8;
+      }
+      h1 {
+        color: #333;
+      }
+      #status {
+        font-size: 1.2em;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔔 Esperando tareas nuevas...</h1>
+    <div id="status">Revisando alerta cada 5 segundos...</div>
+    <audio
+      id="alertaAudio"
+      src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"
+      preload="auto"
+    ></audio>
+
+    <script>
+      const audio = document.getElementById("alertaAudio");
+      let ultimaAlerta = "";
+
+      async function revisarAlerta() {
+        try {
+          const response = await fetch(
+            "https://script.google.com/macros/s/AKfycbyRVuFDnV_8YGAhZ8AQn1Utz4bQd6vYOwQoT2gFN7_fWTeIDBnOE8hhEk6iAjP9dmYs/exec"
+          );
+          const data = await response.text();
+
+          if (data === "ALERTA" && ultimaAlerta !== "ALERTA") {
+            ultimaAlerta = "ALERTA";
+            document.getElementById("status").textContent =
+              "🔔 ALERTA recibida. Reproduciendo sonido...";
+            audio.play().catch((err) => {
+              console.error("No se pudo reproducir el sonido:", err);
+              alert("No se pudo habilitar el sonido. Tocá de nuevo.");
+            });
+          } else if (data !== "ALERTA") {
+            ultimaAlerta = data;
+            document.getElementById("status").textContent =
+              "Sin alerta. Último valor: " + data;
+          }
+        } catch (error) {
+          console.error("Error al verificar la alerta:", error);
+          document.getElementById("status").textContent =
+            "Error al verificar la alerta.";
+        }
+      }
+
+      setInterval(revisarAlerta, 5000);
+    </script>
+  </body>
+</html>

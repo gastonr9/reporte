@@ -27,8 +27,26 @@
     <div id="table-container">Cargando tabla...</div>
 
     <script>
+      // 🔄 Función para actualizar la celda X21 a "false"
+      async function actualizarX21() {
+        const valor = false;
+        const url =
+          "https://script.google.com/macros/s/AKfycbzMSSu_o7_E7302bS7XGANDGWPVMVTxJvZIKxsHkY7tP6QLKeAe4uXj44A8jm8me7Lv/exec";
+        const params = new URLSearchParams({ valor });
+
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            body: params,
+          });
+          const texto = await res.text();
+          console.log("✅ X21 actualizado a false:", texto);
+        } catch (error) {
+          console.error("❌ Error al actualizar X21:", error);
+        }
+      }
       const JSON_URL =
-        "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgUVG8v1XbaHx8_eDx4oRwhp8_VI46IhXFgw6GF7tjMbspNpMblZVYA80HzkKlP4kaVWyt1ycjdGynudN1WSakHypPm3w3kubW_cTVgvmhLkV_7HJyklrJJ7AfG4uo1c8dDhn8L-HPiXwK9tWSWCpk0EZPfzEhT8-6nHBtrwPEotOnpMis61B6vsuJGr0SExOwi3PaRXijntUtKb3hPiaX7BedjJxZ8sBtH4qbRXHARgWL-3xr8qP4VpLG6HUi9ar4bawKNF4MKFpihKya94weBrtsVdA&lib=M63H8O-o6FS6LacR5Mrea3L6dCzuayJHH";
+        "https://script.google.com/macros/s/AKfycby1kZ8ITZVwhsaHuw6hw1u0todLzX4gFAQY762P50refAjJx5lVPUk9nq-Chua6yBOl/exec";
 
       async function dibujarTabla() {
         try {
@@ -61,6 +79,9 @@
 
               td.textContent = cell.value || "";
               td.style.backgroundColor = cell.background || "white";
+              td.style.color = cell.fontColor || "#000";
+              if (cell.bold) td.style.fontWeight = "bold";
+              if (cell.italic) td.style.fontStyle = "italic";
 
               if (cell.rowspan > 1) td.rowSpan = cell.rowspan;
               if (cell.colspan > 1) td.colSpan = cell.colspan;
@@ -88,6 +109,28 @@
           console.error(error);
         }
       }
+      // 🔍 Verifica si el valor es "true" cada 70 segundos
+      async function chequearCambio() {
+        try {
+          const res = await fetch(
+            "https://script.google.com/macros/s/AKfycbzMSSu_o7_E7302bS7XGANDGWPVMVTxJvZIKxsHkY7tP6QLKeAe4uXj44A8jm8me7Lv/exec"
+          );
+          const texto = await res.text();
+          const valor = texto.trim().toLowerCase();
+
+          if (valor === "true") {
+            console.log("🚨 Valor 'true' detectado. Ejecutando acciones...");
+
+            await actualizarX21();
+            dibujarTabla();
+          }
+        } catch (error) {
+          console.error("❌ Error al verificar el estado:", error);
+        }
+      }
+
+      // ⏲️ Ejecutar chequeo cada 70 segundos
+      setInterval(chequearCambio, 5000);
 
       dibujarTabla();
     </script>

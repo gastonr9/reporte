@@ -23,7 +23,7 @@
       async function actualizarX21() {
         const valor = false;
         const url =
-          "https://script.google.com/macros/s/AKfycby1kZ8ITZVwhsaHuw6hw1u0todLzX4gFAQY762P50refAjJx5lVPUk9nq-Chua6yBOl/exec";
+          "https://script.google.com/macros/s/AKfycbzMSSu_o7_E7302bS7XGANDGWPVMVTxJvZIKxsHkY7tP6QLKeAe4uXj44A8jm8me7Lv/exec";
         const params = new URLSearchParams({ valor });
 
         try {
@@ -42,7 +42,7 @@
       async function chequearCambio() {
         try {
           const res = await fetch(
-            "https://script.google.com/macros/s/AKfycby1kZ8ITZVwhsaHuw6hw1u0todLzX4gFAQY762P50refAjJx5lVPUk9nq-Chua6yBOl/exec"
+            "https://script.google.com/macros/s/AKfycbzMSSu_o7_E7302bS7XGANDGWPVMVTxJvZIKxsHkY7tP6QLKeAe4uXj44A8jm8me7Lv/exec"
           );
           const texto = await res.text();
           const valor = texto.trim().toLowerCase();
@@ -50,14 +50,7 @@
           if (valor === "true") {
             console.log("🚨 Valor 'true' detectado. Ejecutando acciones...");
 
-            // ❗ Refrescar el iframe evitando el caché
-            const iframe = document.getElementById("sheetFrame");
-            iframe.src =
-              "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlbYlX3y3ym8VeKgl9INPxLa_jEcbmud4d6aQJ9zOEFPU6Mrd3lZcObc-ojsRi8uSPmVxKjH8Nliru/pubhtml?gid=1720136139&single=true&widget=true&headers=false&t=" +
-              new Date().getTime();
-
             await actualizarX21();
-            await window.location.reload(true);
           }
         } catch (error) {
           console.error("❌ Error al verificar el estado:", error);
@@ -65,7 +58,7 @@
       }
 
       // ⏲️ Ejecutar chequeo cada 70 segundos
-      setInterval(chequearCambio, 10000);
+      setInterval(chequearCambio, 5000);
     </script>
   </body>
 </html>

@@ -2,19 +2,143 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>REPORTE</title>
+    <title>REPORTE COCINA</title>
     <style>
-      iframe {
-        width: 100%;
-        height: 100vh;
-        border: none;
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f0f0f0;
+      }
+      table {
+        border-collapse: collapse;
+        margin: auto;
+      }
+      td {
+        border: 1px solid #444;
+        padding: 10px;
+        min-width: 80px;
+        text-align: center;
+        font-weight: bold;
       }
     </style>
   </head>
   <body>
-    <iframe
-      src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTlbYlX3y3ym8VeKgl9INPxLa_jEcbmud4d6aQJ9zOEFPU6Mrd3lZcObc-ojsRi8uSPmVxKjH8Nliru/pubhtml?gid=1720136139&amp;single=true&amp;widget=true&amp;headers=false"
-    ></iframe>
+    <div id="table-container">Cargando tabla...</div>
+    <audio
+      id="alertaAudio"
+      src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"
+      preload="auto"
+    ></audio>
+
+    <script>
+      // 🔄 Función para actualizar la celda X21 a "false"
+      async function actualizarX21() {
+        const valor = false;
+        const url =
+          "https://script.google.com/macros/s/AKfycbzMSSu_o7_E7302bS7XGANDGWPVMVTxJvZIKxsHkY7tP6QLKeAe4uXj44A8jm8me7Lv/exec";
+        const params = new URLSearchParams({ valor });
+
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            body: params,
+          });
+          const texto = await res.text();
+          console.log("✅ X21 actualizado a false:", texto);
+        } catch (error) {
+          console.error("❌ Error al actualizar X21:", error);
+        }
+      }
+      const JSON_URL =
+        "https://script.google.com/macros/s/AKfycby1kZ8ITZVwhsaHuw6hw1u0todLzX4gFAQY762P50refAjJx5lVPUk9nq-Chua6yBOl/exec";
+
+      async function dibujarTabla() {
+        try {
+          const res = await fetch(JSON_URL);
+          const data = await res.json();
+
+          // Obtener máximos para construir una matriz
+          const maxRow = Math.max(...data.map((c) => c.row));
+          const maxCol = Math.max(...data.map((c) => c.col));
+
+          const matrix = Array.from({ length: maxRow }, () =>
+            Array.from({ length: maxCol }, () => null)
+          );
+
+          // Insertar los datos en la matriz
+          data.forEach((cell) => {
+            matrix[cell.row - 1][cell.col - 1] = cell;
+          });
+
+          // Crear la tabla
+          const table = document.createElement("table");
+
+          for (let i = 0; i < matrix.length; i++) {
+            const tr = document.createElement("tr");
+            for (let j = 0; j < matrix[i].length; j++) {
+              const cell = matrix[i][j];
+              if (!cell) continue;
+
+              const td = document.createElement("td");
+
+              td.textContent = cell.value || "";
+              td.style.backgroundColor = cell.background || "white";
+              td.style.color = cell.fontColor || "#000";
+              if (cell.bold) td.style.fontWeight = "bold";
+              if (cell.italic) td.style.fontStyle = "italic";
+
+              if (cell.rowspan > 1) td.rowSpan = cell.rowspan;
+              if (cell.colspan > 1) td.colSpan = cell.colspan;
+
+              tr.appendChild(td);
+
+              // Marcar celdas combinadas para omitir
+              for (let r = 0; r < (cell.rowspan || 1); r++) {
+                for (let c = 0; c < (cell.colspan || 1); c++) {
+                  if (r === 0 && c === 0) continue;
+                  if (matrix[i + r] && matrix[i + r][j + c]) {
+                    matrix[i + r][j + c] = null;
+                  }
+                }
+              }
+            }
+            table.appendChild(tr);
+          }
+
+          document.getElementById("table-container").innerHTML = "";
+          document.getElementById("table-container").appendChild(table);
+        } catch (error) {
+          document.getElementById("table-container").innerText =
+            "❌ Error al cargar la tabla.";
+          console.error(error);
+        }
+      }
+      const audio = document.getElementById("alertaAudio");
+
+      // 🔍 Verifica si el valor es "true"
+      async function chequearCambio() {
+        try {
+          const res = await fetch(
+            "https://script.google.com/macros/s/AKfycbzMSSu_o7_E7302bS7XGANDGWPVMVTxJvZIKxsHkY7tP6QLKeAe4uXj44A8jm8me7Lv/exec"
+          );
+          const texto = await res.text();
+          const valor = texto.trim().toLowerCase();
+
+          if (valor === "true") {
+            console.log("🚨 Valor 'true' detectado. Ejecutando acciones...");
+            audio.play();
+            await actualizarX21();
+            dibujarTabla();
+          }
+        } catch (error) {
+          console.error("❌ Error al verificar el estado:", error);
+        }
+      }
+
+      // ⏲️ Ejecutar chequeo cada 70 segundos
+      setInterval(chequearCambio, 5000);
+
+      dibujarTabla();
+    </script>
   </body>
 </html>

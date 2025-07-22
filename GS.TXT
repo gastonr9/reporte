@@ -1,0 +1,91 @@
+ALERTA
+
+function doGet() {
+  const hoja = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const celda = hoja.getRange("X21");
+  const valorActual = celda.getValue();
+  
+return ContentService.createTextOutput(valorActual);
+}
+function doPost(e) {
+  const sheet = SpreadsheetApp.openById("18Cf-eNt4IdN8wB_zE43Mjc6SsKQSOt8ExMK-2NkMBBo").getSheetByName("CARGA");
+  const valorNuevo = e.parameter.valor;
+
+  // X21 = fila 21, columna 24
+  sheet.getRange(21, 24).setValue(valorNuevo);
+
+  return ContentService.createTextOutput(valorNuevo);
+}
+
+
+
+JSON
+/*function doGet() {
+    const hoja = SpreadsheetApp.openById("18Cf-eNt4IdN8wB_zE43Mjc6SsKQSOt8ExMK-2NkMBBo").getSheetByName("reporte");
+
+  const data = hoja.getDataRange();
+  const values = data.getValues();
+  const backgrounds = data.getBackgrounds();
+  const fontColors = data.getFontColors();
+  const fontWeights = data.getFontWeights();
+  const fontStyles = data.getFontStyles();
+  const mergedRanges = data.getMergedRanges();
+
+  const mergedMap = {}; // para mapear coordenadas combinadas
+
+  // Detectar celdas combinadas
+  mergedRanges.forEach((r) => {
+    const top = r.getRow() - 1;
+    const left = r.getColumn() - 1;
+    const key = `${top},${left}`;
+    mergedMap[key] = {
+      rowspan: r.getNumRows(),
+      colspan: r.getNumColumns(),
+    };
+  });
+
+  const result = [];
+
+  for (let row = 0; row < values.length; row++) {
+    for (let col = 0; col < values[0].length; col++) {
+      const key = `${row},${col}`;
+      const cell = {
+        row: row + 1,
+        col: col + 1,
+        value: values[row][col],
+        background: backgrounds[row][col],
+        fontColor: fontColors[row][col],
+        bold: fontWeights[row][col] === "bold",
+        italic: fontStyles[row][col] === "italic",
+        rowspan: 1,
+        colspan: 1,
+      };
+
+      // Si es la celda superior izquierda de un merged range
+      if (mergedMap[key]) {
+        cell.rowspan = mergedMap[key].rowspan;
+        cell.colspan = mergedMap[key].colspan;
+        result.push(cell);
+      }
+      // Si está dentro de un merged range pero no es la celda principal → omitir
+      else if (!Object.keys(mergedMap).some((k) => {
+        const [r0, c0] = k.split(",").map(Number);
+        const m = mergedMap[k];
+        return (
+          row >= r0 &&
+          row < r0 + m.rowspan &&
+          col >= c0 &&
+          col < c0 + m.colspan
+        );
+      })) {
+        // no combinada, agregar normalmente
+        result.push(cell);
+      }
+    }
+  }
+
+  return ContentService.createTextOutput(
+    JSON.stringify(result)
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+*/

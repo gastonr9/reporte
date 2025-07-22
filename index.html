@@ -2,19 +2,94 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>REPORTE</title>
+    <title>Tabla desde JSON con Colores y Celdas Combinadas</title>
     <style>
-      iframe {
-        width: 100%;
-        height: 100vh;
-        border: none;
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f0f0f0;
+      }
+      table {
+        border-collapse: collapse;
+        margin: auto;
+      }
+      td {
+        border: 1px solid #444;
+        padding: 10px;
+        min-width: 80px;
+        text-align: center;
+        font-weight: bold;
       }
     </style>
   </head>
   <body>
-    <iframe
-      src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTlbYlX3y3ym8VeKgl9INPxLa_jEcbmud4d6aQJ9zOEFPU6Mrd3lZcObc-ojsRi8uSPmVxKjH8Nliru/pubhtml?gid=1720136139&amp;single=true&amp;widget=true&amp;headers=false"
-    ></iframe>
+    <h2>Tabla generada desde JSON</h2>
+    <div id="table-container">Cargando tabla...</div>
+
+    <script>
+      const JSON_URL =
+        "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgUVG8v1XbaHx8_eDx4oRwhp8_VI46IhXFgw6GF7tjMbspNpMblZVYA80HzkKlP4kaVWyt1ycjdGynudN1WSakHypPm3w3kubW_cTVgvmhLkV_7HJyklrJJ7AfG4uo1c8dDhn8L-HPiXwK9tWSWCpk0EZPfzEhT8-6nHBtrwPEotOnpMis61B6vsuJGr0SExOwi3PaRXijntUtKb3hPiaX7BedjJxZ8sBtH4qbRXHARgWL-3xr8qP4VpLG6HUi9ar4bawKNF4MKFpihKya94weBrtsVdA&lib=M63H8O-o6FS6LacR5Mrea3L6dCzuayJHH";
+
+      async function dibujarTabla() {
+        try {
+          const res = await fetch(JSON_URL);
+          const data = await res.json();
+
+          // Obtener máximos para construir una matriz
+          const maxRow = Math.max(...data.map((c) => c.row));
+          const maxCol = Math.max(...data.map((c) => c.col));
+
+          const matrix = Array.from({ length: maxRow }, () =>
+            Array.from({ length: maxCol }, () => null)
+          );
+
+          // Insertar los datos en la matriz
+          data.forEach((cell) => {
+            matrix[cell.row - 1][cell.col - 1] = cell;
+          });
+
+          // Crear la tabla
+          const table = document.createElement("table");
+
+          for (let i = 0; i < matrix.length; i++) {
+            const tr = document.createElement("tr");
+            for (let j = 0; j < matrix[i].length; j++) {
+              const cell = matrix[i][j];
+              if (!cell) continue;
+
+              const td = document.createElement("td");
+
+              td.textContent = cell.value || "";
+              td.style.backgroundColor = cell.background || "white";
+
+              if (cell.rowspan > 1) td.rowSpan = cell.rowspan;
+              if (cell.colspan > 1) td.colSpan = cell.colspan;
+
+              tr.appendChild(td);
+
+              // Marcar celdas combinadas para omitir
+              for (let r = 0; r < (cell.rowspan || 1); r++) {
+                for (let c = 0; c < (cell.colspan || 1); c++) {
+                  if (r === 0 && c === 0) continue;
+                  if (matrix[i + r] && matrix[i + r][j + c]) {
+                    matrix[i + r][j + c] = null;
+                  }
+                }
+              }
+            }
+            table.appendChild(tr);
+          }
+
+          document.getElementById("table-container").innerHTML = "";
+          document.getElementById("table-container").appendChild(table);
+        } catch (error) {
+          document.getElementById("table-container").innerText =
+            "❌ Error al cargar la tabla.";
+          console.error(error);
+        }
+      }
+
+      dibujarTabla();
+    </script>
   </body>
 </html>

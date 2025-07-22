@@ -25,6 +25,11 @@
   <body>
     <h2>Tabla generada desde JSON</h2>
     <div id="table-container">Cargando tabla...</div>
+    <audio
+      id="alertaAudio"
+      src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"
+      preload="auto"
+    ></audio>
 
     <script>
       // 🔄 Función para actualizar la celda X21 a "false"
@@ -109,7 +114,9 @@
           console.error(error);
         }
       }
-      // 🔍 Verifica si el valor es "true" cada 70 segundos
+      const audio = document.getElementById("alertaAudio");
+
+      // 🔍 Verifica si el valor es "true"
       async function chequearCambio() {
         try {
           const res = await fetch(
@@ -120,7 +127,7 @@
 
           if (valor === "true") {
             console.log("🚨 Valor 'true' detectado. Ejecutando acciones...");
-
+            audio.play();
             await actualizarX21();
             dibujarTabla();
           }

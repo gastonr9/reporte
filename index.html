@@ -4,20 +4,16 @@
     <meta charset="UTF-8" />
     <title>REPORTE COCINA</title>
     <style>
-      h1 {
-        text-align: center;
-        font-size: 40px;
-        color: #333;
-        transition: background-color 0.3s ease;
+      * {
+        margin: 1px;
       }
       body {
         font-family: Arial, sans-serif;
-        font-size: 30px;
+        font-size: 40px;
         background: #ffd7a4;
       }
       table {
         border-collapse: collapse;
-        margin: auto;
         width: -webkit-fill-available;
       }
       td {
@@ -27,12 +23,27 @@
         font-weight: bold;
         transition: background-color 0.8s ease, color 0.5s ease;
       }
+      .titulo {
+        justify-self: center;
+        margin: 0;
+        background-color: azure;
+        border-radius: 12px;
+        width: fit-content;
+        text-align: center;
+        font-size: 30px;
+        color: #333;
+        transition: background-color 0.3s ease;
+      }
+      div {
+      }
     </style>
   </head>
   <body>
-    <h1 id="ultima-actualizacion">Última actualización: ---</h1>
-
+    <div class="titulo">
+      <h1 id="ultima-actualizacion">Última actualización: ---</h1>
+    </div>
     <div id="table-container">Cargando tabla...</div>
+
     <audio
       id="alertaAudio"
       src="/message-alert-190042.mp3"
@@ -147,7 +158,23 @@
           console.error("❌ Error al verificar el estado:", error);
         }
       }
+      async function hora() {
+        const ahora = new Date();
+        const horaFormateada = ahora.toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
 
+        const h1 = document.getElementById("ultima-actualizacion");
+        h1.textContent = "Última actualización: " + horaFormateada;
+        h1.style.borderRadius = "12px";
+        h1.style.backgroundColor = "#d4edda";
+
+        setTimeout(() => {
+          h1.style.backgroundColor = "transparent";
+        }, 1000);
+      }
       async function verificarCambiosEnJSON() {
         try {
           const res = await fetch(JSON_URL);
@@ -157,19 +184,7 @@
           if (nuevoHash !== ultimoJSONHash) {
             console.log("🔄 Cambios detectados en JSON. Redibujando tabla.");
 
-            const ahora = new Date();
-            const horaFormateada = ahora.toLocaleTimeString("es-ES", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            });
-
-            const h1 = document.getElementById("ultima-actualizacion");
-            h1.textContent = "Última actualización: " + horaFormateada;
-            h1.style.backgroundColor = "#d4edda";
-            setTimeout(() => {
-              h1.style.backgroundColor = "transparent";
-            }, 1000);
+            hora();
 
             ultimoJSONHash = nuevoHash;
             await dibujarTabla(nuevoJSON);
@@ -184,6 +199,7 @@
         const res = await fetch(JSON_URL);
         const data = await res.json();
         ultimoJSONHash = hashJSON(data);
+        hora();
         await dibujarTabla(data);
       })();
 

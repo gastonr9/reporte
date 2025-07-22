@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <title>REPORTE COCINA</title>
     <style>
+      h1 {
+        text-align: center;
+        font-size: 30px;
+        color: #333;
+      }
       body {
         font-family: Arial, sans-serif;
         font-size: 25px;
@@ -25,10 +30,12 @@
     </style>
   </head>
   <body>
+    <h1 id="ultima-actualizacion">Última actualización: ---</h1>
+
     <div id="table-container">Cargando tabla...</div>
     <audio
       id="alertaAudio"
-      src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"
+      src="/message-alert-190042.mp3"
       preload="auto"
     ></audio>
 
@@ -127,14 +134,29 @@
 
           if (valor === "true") {
             console.log("🚨 Valor 'true' detectado. Ejecutando acciones...");
-            dibujarTabla();
             document.getElementById("alertaAudio").play();
-            // audio.play();
+
+            dibujarTabla();
             await actualizarX21();
           }
         } catch (error) {
           console.error("❌ Error al verificar el estado:", error);
         }
+      }
+
+      async function hora() {
+        const res = await fetch(JSON_URL);
+        const nuevoJSON = await res.json();
+        const nuevoHash = hashJSON(nuevoJSON);
+        const ahora = new Date();
+        const horaFormateada = ahora.toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        document.getElementById("ultima-actualizacion").textContent =
+          "Última actualización: " + horaFormateada;
+        ultimoJSONHash = nuevoHash;
       }
 
       // 🔁 Chequeo automático cada 10 segundos
@@ -146,14 +168,15 @@
 
           if (nuevoHash !== ultimoJSONHash) {
             console.log("🔄 Cambios detectados en JSON. Redibujando tabla.");
-            await dibujarTabla();
-            // document.getElementById("alertaAudio").play();
+            hora();
+
+            dibujarTabla();
           }
         } catch (err) {
           console.error("❌ Error al verificar cambios JSON:", err);
         }
       }
-
+      hora(); // Actualizar hora al cargar
       dibujarTabla(); // primer carga
       setInterval(chequearCambio, 10000);
       setInterval(verificarCambiosEnJSON, 10000); // cada 10s

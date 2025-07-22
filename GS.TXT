@@ -89,3 +89,34 @@ JSON
   ).setMimeType(ContentService.MimeType.JSON);
 }
 */
+
+BOTON
+
+// ✅ Marca el estado como "en ejecución"
+function marcarEnEjecucion() {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty("estadoEjecucion", "true");
+}
+
+// ✅ Desmarca el estado (lo pone en false)
+function desmarcarEjecucion() {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty("estadoEjecucion", "false");
+}
+
+// ✅ Permite consultar el estado desde HTML
+function doGet() {
+  const estado = PropertiesService.getScriptProperties().getProperty("estadoEjecucion") || "false";
+  return ContentService.createTextOutput(estado).setMimeType(ContentService.MimeType.TEXT);
+}
+function doPost(e) {
+  const accion = e.parameter.accion;
+  const props = PropertiesService.getScriptProperties();
+
+  if (accion === "desmarcar") {
+    props.setProperty("estadoEjecucion", "false");
+    return ContentService.createTextOutput("OK - desmarcado");
+  }
+
+  return ContentService.createTextOutput("Acción no reconocida");
+}

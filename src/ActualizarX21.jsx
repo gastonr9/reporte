@@ -39,6 +39,7 @@ const ActualizarX21 = () => {
         iframe.src = `${iframeSrcBase}&t=${Date.now()}`;
 
         await actualizarX21();
+        window.location.reload(true); // recarga la página
       }
     } catch (error) {
       console.error("❌ Error al verificar el estado:", error);
@@ -55,7 +56,7 @@ const ActualizarX21 = () => {
       <iframe
         id="sheetFrame"
         src={`${iframeSrcBase}&t=${Date.now()}`}
-        style={{ width: "100%", height: "100vh", border: "none" }}
+        style={{ border: "none" }}
         title="Google Sheet"
       ></iframe>
     </div>

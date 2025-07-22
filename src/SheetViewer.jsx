@@ -1,55 +1,62 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import axios from "axios";
 
-const SheetViewer = () => {
-  const [iframeSrc, setIframeSrc] = useState("");
-  const [valorAnterior, setValorAnterior] = useState(null);
-
-  const WEBAPP_URL =
-    "https://script.google.com/macros/s/AKfycby1kZ8ITZVwhsaHuw6hw1u0todLzX4gFAQY762P50refAjJx5lVPUk9nq-Chua6yBOl/exec";
-  const SHEET_IFRAME =
+const ActualizarX21 = () => {
+  const iframeSrcBase =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vTlbYlX3y3ym8VeKgl9INPxLa_jEcbmud4d6aQJ9zOEFPU6Mrd3lZcObc-ojsRi8uSPmVxKjH8Nliru/pubhtml?gid=1720136139&single=true&widget=true&headers=false";
 
-  const refrescarIframe = () => {
-    setIframeSrc(`${SHEET_IFRAME}&t=${Date.now()}`); // evita caché
+  const webAppUrl =
+    "https://script.google.com/macros/s/AKfycby1kZ8ITZVwhsaHuw6hw1u0todLzX4gFAQY762P50refAjJx5lVPUk9nq-Chua6yBOl/exec";
+
+  // 🟦 Actualiza X21 a false usando Axios
+  const actualizarX21 = async () => {
+    try {
+      const res = await axios.post(
+        webAppUrl,
+        new URLSearchParams({ valor: false })
+      );
+      console.log("✅ X21 actualizado a false:", res.data);
+    } catch (error) {
+      console.error("❌ Error al actualizar X21:", error);
+    }
   };
 
-  const chequearEstado = async () => {
+  // 🔁 Verifica si la celda tiene true y actúa
+  const chequearCambio = async () => {
     try {
-      const { data } = await axios.get(WEBAPP_URL);
-      const valor = data.trim().toLowerCase();
+      const res = await axios.get(webAppUrl);
+      const valor = res.data.toString().trim().toLowerCase();
 
-      if (valor === "true" && valorAnterior !== "true") {
-        console.log("🔄 Actualización detectada...");
-        refrescarIframe();
-        await axios.post(WEBAPP_URL, new URLSearchParams({ valor: false }));
-        setValorAnterior("true");
-      } else {
-        setValorAnterior(valor);
+      if (valor === "true") {
+        console.log("🚨 Valor 'true' detectado. Ejecutando acciones...");
+
+        // Recargar el iframe sin cache
+        const iframe = document.getElementById("sheetFrame");
+        iframe.src = `${iframeSrcBase}&t=${Date.now()}`;
+
+        await actualizarX21();
+        window.location.reload(true);
       }
-    } catch (err) {
-      console.error("❌ Error:", err);
+    } catch (error) {
+      console.error("❌ Error al verificar el estado:", error);
     }
   };
 
   useEffect(() => {
-    refrescarIframe(); // cargar iframe inicial
-    const interval = setInterval(chequearEstado, 30000); // cada 30s
+    const interval = setInterval(chequearCambio, 10000);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div>
-      <h2>📊 Vista en Tiempo Real</h2>
       <iframe
-        src={iframeSrc}
+        id="sheetFrame"
+        src={`${iframeSrcBase}&t=${Date.now()}`}
+        style={{ border: "none", width: "100%", height: "100vh" }}
         title="Google Sheet"
-        width="100%"
-        height="600"
-        style={{ border: "none" }}
       ></iframe>
     </div>
   );
 };
 
-export default SheetViewer;
+export default ActualizarX21;

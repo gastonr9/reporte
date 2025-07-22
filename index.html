@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>REPORTE COCINA</title>
@@ -126,9 +126,9 @@
 
           if (valor === "true") {
             console.log("🚨 Valor 'true' detectado. Ejecutando acciones...");
+            dibujarTabla();
             audio.play();
             await actualizarX21();
-            dibujarTabla();
           }
         } catch (error) {
           console.error("❌ Error al verificar el estado:", error);

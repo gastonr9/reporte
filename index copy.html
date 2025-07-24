@@ -1,30 +1,78 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <title>REPORTE COCINA</title>
     <style>
+      * {
+        margin: 0;
+      }
       body {
         font-family: Arial, sans-serif;
-        padding: 20px;
-        background: #f0f0f0;
+
+        background: #ffd7a4;
       }
       table {
         border-collapse: collapse;
-        margin: auto;
-        width: -webkit-fill-available;
+        margin: 5px;
+        /* height: 700px; */
+        place-self: center;
       }
       td {
+        padding-inline: 10px;
         border: 1px solid #444;
-        padding: 10px;
-        min-width: 80px;
+        font-size: 2.3vw;
+
+        /* min-width: 100px; */
         text-align: center;
         font-weight: bold;
+        transition: background-color 0.8s ease, color 0.5s ease;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .titulo {
+        display: flex;
+        justify-content: space-between;
+        /* width: 100%; */
+        margin: 0;
+        padding: 0 15px;
+        background-color: azure;
+        border-radius: 12px;
+        color: #333;
+        transition: background-color 0.3s ease;
+      }
+      span {
+        font-size: xx-large;
+        border-radius: 12px;
+        background-color: transparent;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #table-container {
+        display: table;
+        /* display: flex; */
+        /* justify-content: center;
+        align-items: center; */
+        /* height: 100vh; */
       }
     </style>
   </head>
   <body>
+    <div class="caja">
+      <div class="titulo">
+        <span id="ultima-actualizacion">Última actualización: </span>
+        <span id="hora">11:33:13</span>
+      </div>
+    </div>
+
+    <!-- <div class="titulo">
+      <a id="ultima-actualizacion">Última actualización: </a>
+      <a id="hora"></a>
+    </div> -->
     <div id="table-container">Cargando tabla...</div>
+
     <audio
       id="alertaAudio"
       src="/message-alert-190042.mp3"
@@ -32,111 +80,130 @@
     ></audio>
 
     <script>
-      // 🔄 Función para actualizar la celda X21 a "false"
-      async function actualizarX21() {
-        const valor = false;
-        const url =
-          "https://script.google.com/macros/s/AKfycbzMSSu_o7_E7302bS7XGANDGWPVMVTxJvZIKxsHkY7tP6QLKeAe4uXj44A8jm8me7Lv/exec";
-        const params = new URLSearchParams({ valor });
+      const JSON_URL =
+        "https://script.google.com/macros/s/AKfycby1kZ8ITZVwhsaHuw6hw1u0todLzX4gFAQY762P50refAjJx5lVPUk9nq-Chua6yBOl/exec";
+      const CAMBIO_ESTADO_URL =
+        "https://script.google.com/macros/s/AKfycbwrM1VM-6g74z1C8O2HivV1dkDI988G4GRzbvkQP1FMA9RWmVivPKCmJlHT0k4tMi-4/exec";
 
+      let ultimoJSONHash = "";
+
+      const hashJSON = (json) => JSON.stringify(json);
+
+      async function actualizarBoton() {
+        const params = new URLSearchParams({ accion: "desmarcar" });
         try {
-          const res = await fetch(url, {
+          const res = await fetch(CAMBIO_ESTADO_URL, {
             method: "POST",
             body: params,
           });
           const texto = await res.text();
-          console.log("✅ X21 actualizado a false:", texto);
+          console.log("✅ Estado cambiado a false:", texto);
         } catch (error) {
-          console.error("❌ Error al actualizar X21:", error);
+          console.error("❌ Error al desmarcar ejecución:", error);
         }
       }
-      const JSON_URL =
-        "https://script.google.com/macros/s/AKfycby1kZ8ITZVwhsaHuw6hw1u0todLzX4gFAQY762P50refAjJx5lVPUk9nq-Chua6yBOl/exec";
 
-      let ultimoJSONHash = "";
+      let ultimoEstadoCeldas = {};
 
-      function hashJSON(json) {
-        return JSON.stringify(json);
-      }
+      async function dibujarTabla(jsonData) {
+        const maxRow = Math.max(...jsonData.map((c) => c.row));
+        const maxCol = Math.max(...jsonData.map((c) => c.col));
+        const matrix = Array.from({ length: maxRow }, () =>
+          Array.from({ length: maxCol }, () => null)
+        );
 
-      async function dibujarTabla() {
-        try {
-          const res = await fetch(JSON_URL);
-          const data = await res.json();
-          ultimoJSONHash = hashJSON(data); // Guardar nueva versión
+        jsonData.forEach((cell) => {
+          matrix[cell.row - 1][cell.col - 1] = cell;
+        });
 
-          const maxRow = Math.max(...data.map((c) => c.row));
-          const maxCol = Math.max(...data.map((c) => c.col));
-          const matrix = Array.from({ length: maxRow }, () =>
-            Array.from({ length: maxCol }, () => null)
-          );
+        const table = document.createElement("table");
 
-          data.forEach((cell) => {
-            matrix[cell.row - 1][cell.col - 1] = cell;
-          });
+        for (let i = 0; i < matrix.length; i++) {
+          const tr = document.createElement("tr");
+          for (let j = 0; j < matrix[i].length; j++) {
+            const cell = matrix[i][j];
+            if (!cell) continue;
 
-          const table = document.createElement("table");
+            const cellKey = `${cell.row}-${cell.col}`;
+            const prev = ultimoEstadoCeldas[cellKey];
+            const hasChanged =
+              !prev ||
+              prev.value !== cell.value ||
+              prev.background !== cell.background;
 
-          for (let i = 0; i < matrix.length; i++) {
-            const tr = document.createElement("tr");
-            for (let j = 0; j < matrix[i].length; j++) {
-              const cell = matrix[i][j];
-              if (!cell) continue;
+            const td = document.createElement("td");
+            td.textContent = cell.value || "";
+            td.style.backgroundColor = cell.background || "white";
+            td.style.color = cell.fontColor || "#000";
+            if (cell.bold) td.style.fontWeight = "bold";
+            if (cell.italic) td.style.fontStyle = "italic";
+            if (cell.rowspan > 1) td.rowSpan = cell.rowspan;
+            if (cell.colspan > 1) td.colSpan = cell.colspan;
 
-              const td = document.createElement("td");
+            if (hasChanged) {
+              td.style.backgroundColor = "#D9B92E"; // color de cambio
+              setTimeout(() => {
+                td.style.backgroundColor = cell.background || "white";
+              }, 500);
+            }
 
-              td.textContent = cell.value || "";
-              td.style.backgroundColor = cell.background || "white";
-              td.style.color = cell.fontColor || "#000";
-              if (cell.bold) td.style.fontWeight = "bold";
-              if (cell.italic) td.style.fontStyle = "italic";
+            // Guardamos el estado actual
+            ultimoEstadoCeldas[cellKey] = {
+              value: cell.value,
+              background: cell.background,
+              fontColor: cell.fontColor,
+            };
 
-              if (cell.rowspan > 1) td.rowSpan = cell.rowspan;
-              if (cell.colspan > 1) td.colSpan = cell.colspan;
+            tr.appendChild(td);
 
-              tr.appendChild(td);
-
-              for (let r = 0; r < (cell.rowspan || 1); r++) {
-                for (let c = 0; c < (cell.colspan || 1); c++) {
-                  if (r === 0 && c === 0) continue;
-                  if (matrix[i + r] && matrix[i + r][j + c]) {
-                    matrix[i + r][j + c] = null;
-                  }
+            for (let r = 0; r < (cell.rowspan || 1); r++) {
+              for (let c = 0; c < (cell.colspan || 1); c++) {
+                if (r === 0 && c === 0) continue;
+                if (matrix[i + r] && matrix[i + r][j + c]) {
+                  matrix[i + r][j + c] = null;
                 }
               }
             }
-            table.appendChild(tr);
           }
-
-          document.getElementById("table-container").innerHTML = "";
-          document.getElementById("table-container").appendChild(table);
-        } catch (error) {
-          console.error("❌ Error al dibujar tabla:", error);
+          table.appendChild(tr);
         }
+
+        const contenedor = document.getElementById("table-container");
+        contenedor.innerHTML = "";
+        contenedor.appendChild(table);
       }
 
-      // 🔍 Verifica si el valor es "true"
       async function chequearCambio() {
         try {
-          const res = await fetch(
-            "https://script.google.com/macros/s/AKfycbzMSSu_o7_E7302bS7XGANDGWPVMVTxJvZIKxsHkY7tP6QLKeAe4uXj44A8jm8me7Lv/exec"
-          );
+          const res = await fetch(CAMBIO_ESTADO_URL);
           const texto = await res.text();
           const valor = texto.trim().toLowerCase();
-
           if (valor === "true") {
             console.log("🚨 Valor 'true' detectado. Ejecutando acciones...");
-            dibujarTabla();
             document.getElementById("alertaAudio").play();
-            // audio.play();
-            await actualizarX21();
+            await actualizarBoton();
           }
         } catch (error) {
           console.error("❌ Error al verificar el estado:", error);
         }
       }
+      async function hora() {
+        const ahora = new Date();
+        const horaFormateada = ahora.toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
 
-      // 🔁 Chequeo automático cada 10 segundos
+        const a = document.getElementById("hora");
+        a.textContent = horaFormateada;
+        a.style.borderRadius = "12px";
+        a.style.backgroundColor = "#d4edda";
+
+        setTimeout(() => {
+          a.style.backgroundColor = "transparent";
+        }, 1000);
+      }
       async function verificarCambiosEnJSON() {
         try {
           const res = await fetch(JSON_URL);
@@ -145,17 +212,30 @@
 
           if (nuevoHash !== ultimoJSONHash) {
             console.log("🔄 Cambios detectados en JSON. Redibujando tabla.");
-            await dibujarTabla();
-            // document.getElementById("alertaAudio").play();
+
+            hora();
+
+            ultimoJSONHash = nuevoHash;
+            await dibujarTabla(nuevoJSON);
           }
         } catch (err) {
           console.error("❌ Error al verificar cambios JSON:", err);
         }
       }
 
-      dibujarTabla(); // primer carga
-      setInterval(chequearCambio, 10000);
-      setInterval(verificarCambiosEnJSON, 10000); // cada 10s
+      // 🚀 Inicialización
+      (async () => {
+        const res = await fetch(JSON_URL);
+        const data = await res.json();
+        ultimoJSONHash = hashJSON(data);
+        hora();
+        await dibujarTabla(data);
+      })();
+
+      setInterval(() => {
+        verificarCambiosEnJSON();
+        chequearCambio();
+      }, 10000);
     </script>
   </body>
 </html>

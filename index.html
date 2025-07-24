@@ -5,43 +5,69 @@
     <title>REPORTE COCINA</title>
     <style>
       * {
-        margin: 1px;
+        margin: 0;
       }
       body {
         font-family: Arial, sans-serif;
-        font-size: 40px;
         background: #ffd7a4;
       }
       table {
         border-collapse: collapse;
-        width: -webkit-fill-available;
+        width: 100%;
+        max-width: 100%;
+        margin: 0 auto;
       }
       td {
+        /* padding: 2px; */
         border: 1px solid #444;
-        min-width: 80px;
+        font-size: clamp(14px, 2vw, 27px);
         text-align: center;
         font-weight: bold;
         transition: background-color 0.8s ease, color 0.5s ease;
+        white-space: nowrap; /* Mantener el texto en una sola línea */
+        overflow: hidden; /* Ocultar el texto que se desborda */
+        text-overflow: ellipsis; /* Mostrar puntos suspensivos si el texto es demasiado largo */
       }
       .titulo {
-        justify-self: center;
+        display: flex;
+        justify-content: space-between;
         margin: 0;
+        padding: 0 15px;
         background-color: azure;
         border-radius: 12px;
-        width: fit-content;
-        text-align: center;
-        font-size: 30px;
         color: #333;
         transition: background-color 0.3s ease;
       }
-      div {
+      span {
+        font-size: xx-large;
+        border-radius: 12px;
+        background-color: transparent;
+        white-space: nowrap;
+      }
+      .caja {
+        width: 100%;
+        max-width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+
+      #table-container {
+        display: block;
+        width: calc(100% - 20px);
+        max-width: 100%;
+        margin: 0 auto;
+        overflow-x: auto;
       }
     </style>
   </head>
   <body>
-    <div class="titulo">
-      <h1 id="ultima-actualizacion">Última actualización: ---</h1>
+    <div class="caja">
+      <div class="titulo">
+        <span id="ultima-actualizacion">Última actualización: </span>
+        <span id="hora">11:33:13</span>
+      </div>
     </div>
+
     <div id="table-container">Cargando tabla...</div>
 
     <audio
@@ -158,6 +184,7 @@
           console.error("❌ Error al verificar el estado:", error);
         }
       }
+
       async function hora() {
         const ahora = new Date();
         const horaFormateada = ahora.toLocaleTimeString("es-ES", {
@@ -166,15 +193,16 @@
           second: "2-digit",
         });
 
-        const h1 = document.getElementById("ultima-actualizacion");
-        h1.textContent = "Última actualización: " + horaFormateada;
-        h1.style.borderRadius = "12px";
-        h1.style.backgroundColor = "#d4edda";
+        const a = document.getElementById("hora");
+        a.textContent = horaFormateada;
+        a.style.borderRadius = "12px";
+        a.style.backgroundColor = "#d4edda";
 
         setTimeout(() => {
-          h1.style.backgroundColor = "transparent";
+          a.style.backgroundColor = "transparent";
         }, 1000);
       }
+
       async function verificarCambiosEnJSON() {
         try {
           const res = await fetch(JSON_URL);

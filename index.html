@@ -18,7 +18,6 @@
         margin: 0 auto;
       }
       td {
-        /* padding: 2px; */
         border: 1px solid #444;
         font-size: clamp(14px, 2vw, 27px);
         text-align: center;
@@ -31,12 +30,14 @@
       .titulo {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         margin: 0;
         padding: 0 15px;
         background-color: azure;
         border-radius: 12px;
         color: #333;
         transition: background-color 0.3s ease;
+        gap: 20px;
       }
       span {
         font-size: xx-large;
@@ -50,7 +51,6 @@
         padding: 10px;
         box-sizing: border-box;
       }
-
       #table-container {
         display: block;
         width: calc(100% - 20px);
@@ -63,8 +63,14 @@
   <body>
     <div class="caja">
       <div class="titulo">
-        <span id="ultima-actualizacion">Última actualización: </span>
-        <span id="hora">11:33:13</span>
+        <span id="ultima-actualizacion"
+          >Última actualización:
+          <span id="hora" style="color: #ff0000">11:33:13</span>
+        </span>
+
+        <div style="display: ruby">
+          <span id="reloj-tiempo-real" style="color: #007bff">00:00:00</span>
+        </div>
       </div>
     </div>
 
@@ -230,6 +236,20 @@
         hora();
         await dibujarTabla(data);
       })();
+
+      function actualizarReloj() {
+        const ahora = new Date();
+        const horas = ahora.getHours().toString().padStart(2, "0");
+        const minutos = ahora.getMinutes().toString().padStart(2, "0");
+        const segundos = ahora.getSeconds().toString().padStart(2, "0");
+        document.getElementById(
+          "reloj-tiempo-real"
+        ).textContent = `${horas}:${minutos}:${segundos}`;
+      }
+
+      // Actualizar reloj cada segundo
+      setInterval(actualizarReloj, 1000);
+      actualizarReloj(); // Inicializar inmediatamente
 
       setInterval(() => {
         verificarCambiosEnJSON();
